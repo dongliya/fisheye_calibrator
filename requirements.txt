@@ -1,0 +1,5 @@
+# Fisheye Calibrator Dependencies
+flask>=2.0.0
+opencv-python>=4.5.0
+numpy>=1.20.0
+matplotlib>=3.4.0

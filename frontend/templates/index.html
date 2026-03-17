@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>鱼眼标定工具</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="hdr">
+  <div class="hicon">🎯</div>
+  <div class="htitle">鱼眼矫正标定工具 <span>v2.0</span></div>
+  <div class="hright">
+    <span class="hpill on" id="hImgCnt">0 张图片</span>
+    <span class="hpill" id="hOkCnt">0 有效</span>
+  </div>
+</header>
+
+<div class="main">
+<!-- ══ LEFT ══ -->
+<div class="lpanel">
+  <div class="ph">图片列表</div>
+  <div class="upzone" id="upzone" style="cursor:default;padding:12px">
+    <div class="ui">📁</div>
+    <p><strong>输入图片目录并加载</strong>支持 JPG / PNG / BMP 等常见格式</p>
+    <div style="display:flex;gap:6px;align-items:center;justify-content:center;margin-top:8px">
+      <input id="dirPath" type="text" placeholder="例如: /workspace/code/image/fisheye" style="width:100%;max-width:220px;background:var(--s1);border:1px solid var(--bd);border-radius:7px;color:var(--tx1);padding:6px 8px;font-size:11px">
+      <button class="btn" type="button" onclick="pickImageDirectory()">选择目录</button>
+    </div>
+  </div>
+  <div class="ilist" id="ilist">
+    <div style="text-align:center;padding:28px 12px;color:var(--tx3);font-size:11px">输入目录并加载图片</div>
+  </div>
+  <div class="lfoot">
+    <button class="btn" id="btDA" onclick="detectAll()" disabled>批量检测</button>
+    <button class="btn btn-p" id="btCal" onclick="doCalib()" disabled>计算标定</button>
+  </div>
+  <div class="lfoot">
+    <button class="btn" onclick="clearAllImages()" style="border-color:var(--err);color:var(--err)">🗑 清空全部</button>
+  </div>
+</div>
+
+<!-- ══ CENTER ══ -->
+<div class="cpanel">
+  <div class="ctbar">
+    <span class="tlbl">模式</span>
+    <button class="tbtn on"   id="mV" onclick="setMode('view')"  title="拖拽角点移位，下拉删除">👁 移动</button>
+    <button class="tbtn"      id="mA" onclick="setMode('add')"   title="点击添加新角点">＋ 添加</button>
+    <button class="tbtn"      id="mD" onclick="setMode('del')"   title="点击删除最近角点">✕ 删除</button>
+    <button class="tbtn"      id="mN" onclick="setMode('num')"   title="点击角点修改其序号"># 编辑序号</button>
+    <div class="tsep"></div>
+    <div class="gcfg">
+      <label>W</label><input type="number" id="cbc" value="9" min="2" max="25" onchange="redraw()">
+      <label>H</label><input type="number" id="cbr" value="6" min="2" max="25" onchange="redraw()">
+      <label>mm</label><input type="number" id="sqsz" value="25" min="1" max="500" style="width:44px">
+    </div>
+    <div class="tsep"></div>
+    <button class="dbtn"  id="btDet"   onclick="detectCurrent()"   disabled>🔍 自动检测</button>
+    <button class="tbtn"  id="btFlip"  onclick="flipCorners()"      disabled title="翻转顺序 (0↔末尾)">↩ 翻转</button>
+    <button class="tbtn"  id="btLabel" onclick="toggleLabels()"               title="显示/隐藏序号">🏷 序号</button>
+    <button class="tbtn"  id="btClr"   onclick="clearCorners()"    disabled>🗑 清除</button>
+    <span class="tlbl" style="margin-left:8px;opacity:0.6">🖱 中键拖动 | 空格 + 拖动</span>
+    <div class="zctrl">
+      <button class="zbtn" onclick="changeZoom(-0.2)">−</button>
+      <span class="zlbl" id="zlbl">100%</span>
+      <button class="zbtn" onclick="changeZoom(0.2)">＋</button>
+      <button class="zbtn" onclick="fitZoom()" title="适应窗口">⊡</button>
+    </div>
+  </div>
+
+  <div class="ccanvas" id="cc">
+    <div class="ch-line ch-h" id="chH"></div>
+    <div class="ch-line ch-v" id="chV"></div>
+    <div class="ch-dot" id="chDot"></div>
+    <div class="empty-s" id="emptyS"><div class="ei">📷</div><span>输入目录并加载图片</span></div>
+    <div id="wrap" style="display:none">
+      <img id="imgEl" draggable="false">
+      <canvas id="overlay"></canvas>
+      <div class="delhint" id="delhint">拖到此处以删除</div>
+    </div>
+  </div>
+
+  <div class="csbar">
+    <span>图片：<b id="sn">—</b></span>
+    <span>尺寸：<b id="ss">—</b></span>
+    <span>角点：<b id="sc">0</b></span>
+    <span>坐标：<b id="sp">—</b></span>
+    <span class="mode-hint" id="modeHint">移动模式</span>
+  </div>
+</div>
+
+<!-- ══ RIGHT ══ -->
+<div class="rpanel">
+  <div class="ph">标定参数</div>
+  <div class="psec">
+    <div class="stitle">当前图像</div>
+    <div class="prow"><span class="plbl">状态</span><span class="pval na" id="pSt">未选择</span></div>
+    <div class="prow"><span class="plbl">角点</span><span class="pval na" id="pCn">—</span></div>
+    <div class="prow"><span class="plbl">有效图片</span><span class="pval na" id="pUs">0/0</span></div>
+  </div>
+  <div class="psec grow">
+    <div class="stitle">标定结果</div>
+    <div id="noCalib" style="text-align:center;padding:14px;color:var(--tx3);font-size:11px">完成检测后点击"计算标定"</div>
+    <div id="calRes" style="display:none">
+      <div class="rmsd">
+        <div class="rmsv" id="rmsv">—</div>
+        <div class="rmsu">pixels RMS  重投影误差</div>
+      </div>
+      <div class="rbox">
+        <div class="rtitle">内参矩阵 K</div>
+        <div class="mdisp" id="matK">—</div>
+      </div>
+      <div class="rbox">
+        <div class="rtitle">鱼眼内参矩阵 fisheye_K</div>
+        <div class="mdisp" id="matFK">—</div>
+      </div>
+      <div class="rbox">
+        <div class="rtitle">标准畸变</div>
+        <div class="clist" id="distC"></div>
+      </div>
+      <div class="rbox">
+        <div class="rtitle">鱼眼系数</div>
+        <div class="clist" id="fishC"></div>
+      </div>
+      <button class="cbtn" onclick="showReport()">查看标定报告</button>
+      <button class="exbtn" onclick="doExport('json')" disabled>导出 JSON</button>
+      <button class="exbtn" onclick="doExport('yaml')" disabled>导出 YAML</button>
+      <div class="rbox">
+        <div class="rtitle">参数矫正预览</div>
+        <div class="ud-ctrl">
+          <select id="udSel"></select>
+          <button class="exbtn" type="button" onclick="previewUndistort()">选择并矫正</button>
+        </div>
+      </div>
+    </div>
+    <div class="logbox" id="logbox"></div>
+  </div>
+</div>
+</div><!-- /main -->
+
+<!-- ══ INDEX EDIT POPUP ══ -->
+<div class="idx-pop" id="idxPop">
+  <h4>✏️ 编辑序号 <span class="badge" id="popBadge">0</span></h4>
+  <div class="info" id="popInfo">坐标：<b>—</b></div>
+  <div class="row">
+    <label>目标序号</label>
+    <input type="number" id="popInput" min="0" value="0">
+  </div>
+  <div class="hint" id="popHint">输入新序号后确认，该点与目标位置的点互换</div>
+  <div class="btns">
+    <button class="ok"     onclick="confirmIdx()">确认交换</button>
+    <button class="cancel" onclick="closeIdxPop()">取消</button>
+  </div>
+</div>
+
+<!-- ══ REPORT MODAL ══ -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">标定报告</h2>
+    <img id="modalImg" src="" alt="">
+    <div class="modal-pair" id="modalPair" style="display:none">
+      <div class="modal-pair-card">
+        <div class="modal-pair-label">原图</div>
+        <img id="modalOrigImg" src="" alt="original">
+      </div>
+      <div class="modal-pair-card">
+        <div class="modal-pair-label">矫正图</div>
+        <img id="modalRectImg" src="" alt="undistorted">
+      </div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">关闭</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
