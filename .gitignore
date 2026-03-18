@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 calibration_output/
 __pycache__/
+**/__pycache__/
 *.py[codz]
 *$py.class
 
@@ -10,6 +11,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+**/build/
 develop-eggs/
 dist/
 downloads/
