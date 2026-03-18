@@ -9,10 +9,16 @@ Web-based chessboard calibration tool for fisheye and wide-angle cameras.
   从本地目录加载图片（选择目录后自动加载）。
 - Automatic and manual corner editing (view/add/delete/index modes).  
   支持自动检测与手动角点编辑（移动/添加/删除/改序号）。
-- Dual model calibration (standard + fisheye).  
-  同时计算标准模型与鱼眼模型参数。
+- Select calibration mode (standard or fisheye).  
+  支持选择标定模式（标准模型或鱼眼模型）。
 - Undistortion preview in modal (left original, right corrected).  
   弹窗查看矫正预览（左原图、右矫正图）。
+- Preview controls: `balance` (fisheye only), `out_scale`, `focal_scale`, `cx_offset`, `cy_offset`, `crop_*`.  
+  预览参数支持：`balance`（仅鱼眼）、`out_scale`、`focal_scale`、`cx_offset`、`cy_offset`、`crop_*`。
+- Save preview parameters (fisheye mode) to calibration output.  
+  可在鱼眼模式保存预览参数到标定结果。
+- UI language switch (中文 / English), and backend logs/errors follow selected language.  
+  支持中英文切换，且后端日志/错误会跟随前端语言输出。
 - Export calibration results to JSON and YAML.  
   支持导出 JSON 和 YAML。
 
@@ -66,18 +72,26 @@ Open `http://localhost:5050` in your browser after startup.
 
 ## Usage / 使用流程
 
-1. Click `选择目录` and select an image folder (auto-load).  
+1. Select UI language (`中文` / `English`) from the top-right corner.  
+   先在右上角选择界面语言（`中文` / `English`）。
+2. Click `选择目录` and select an image folder (auto-load).  
    点击 `选择目录` 并选择图片文件夹（会自动加载）。
-2. Set chessboard parameters `W`, `H`, and `mm`.  
+3. Set chessboard parameters `W`, `H`, and `mm`.  
    设置棋盘参数 `W`、`H`、`mm`。
-3. Run `批量检测`, then manually adjust corners if needed.  
+4. Choose calibration model (`标准模型` / `鱼眼模型`).  
+   选择标定模型（`标准模型` / `鱼眼模型`）。
+5. Run `批量检测`, then manually adjust corners if needed.  
    先执行 `批量检测`，必要时手动修正角点。
-4. Click `计算标定`.  
+6. Click `计算标定`.  
    点击 `计算标定`。
-5. Review RMS, `K`, `fisheye_K`, distortion coefficients, and preview undistortion.  
-   查看 RMS、`K`、`fisheye_K`、畸变系数，并进行矫正预览。
-6. Export JSON/YAML if needed.  
-   按需导出 JSON/YAML。
+7. Review RMS and model parameters in the right panel.  
+   在右侧查看 RMS 与模型参数。
+8. Open undistortion preview and adjust parameters as needed.  
+   打开矫正预览并按需调整参数。
+9. In fisheye mode, click `保存参数` to persist preview params.  
+   鱼眼模式可点击 `保存参数` 保存预览参数。
+10. Export JSON/YAML if needed.  
+    按需导出 JSON/YAML。
 
 ## Keyboard Shortcuts / 快捷键
 
@@ -99,6 +113,14 @@ Saved in `--output` directory:
 
 - `calibration_params.json`: full calibration result / 完整标定结果
 - `calibration.yaml`: OpenCV YAML / OpenCV YAML 格式参数
+
+Typical saved fields include:  
+常见输出字段包括：
+
+- `calibration_mode`, `preferred_model`, `preferred_rms`
+- `K`, `dist` (standard model when available)
+- `fisheye_K`, `fisheye_D`, `fisheye_balance` (fisheye model when available)
+- `preview_params` (saved preview settings in fisheye mode)
 
 ## Corner Cache / 角点缓存
 

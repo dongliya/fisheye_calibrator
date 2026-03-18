@@ -53,7 +53,12 @@ def render_report_png(result: dict) -> str:
     fig.suptitle('Fisheye Calibration Report', fontsize=15,
                  color='#e8ecf0', fontweight='bold', y=0.97)
     
-    K = result.get('K') or result.get('fisheye_K')
+    preferred_model = result.get('preferred_model', 'fisheye' if result.get('fisheye_K') else 'standard')
+    preferred_rms = result.get('preferred_rms')
+    if preferred_rms is None:
+        preferred_rms = result.get('fisheye_rms' if preferred_model == 'fisheye' else 'rms', float('nan'))
+    fisheye_balance = float(result.get('fisheye_balance', 0.6))
+    K = result.get('fisheye_K') if preferred_model == 'fisheye' else result.get('K')
     
     # Plot 1: Per-Image RMS Error
     ax1 = fig.add_subplot(gs[0, 0])
@@ -62,10 +67,16 @@ def render_report_png(result: dict) -> str:
     if per:
         bc = ['#00c98a' if e < 0.5 else '#ffaa00' if e < 1.5 else '#ff4466' for e in per]
         ax1.bar(range(len(per)), per, color=bc, edgecolor='#2a2f3a', lw=0.7, zorder=3)
-        ax1.axhline(result['rms'], color='#7b61ff', ls='--', lw=1.5, label=f"avg {result['rms']:.4f}")
+        ax1.axhline(preferred_rms, color='#7b61ff', ls='--', lw=1.5, label=f"avg {preferred_rms:.4f}")
         ax1.axhline(0.5, color='#00c98a', ls=':', lw=1, alpha=0.7)
         ax1.axhline(1.5, color='#ff4466', ls=':', lw=1, alpha=0.7)
         ax1.legend(fontsize=8, facecolor='#1a1d24', edgecolor='#2a2f3a', labelcolor='#ccc')
+    else:
+        ax1.axhline(preferred_rms, color='#7b61ff', ls='--', lw=1.5)
+        ax1.text(0.5, 0.55, f'RMS {preferred_rms:.4f} px', ha='center', va='center',
+                 color='#e8ecf0', fontsize=10, fontweight='bold', transform=ax1.transAxes)
+        ax1.text(0.5, 0.43, 'No per-image RMS in this mode', ha='center', va='center',
+                 color='#8891a0', fontsize=8, transform=ax1.transAxes)
     ax1.set_title('Per-Image RMS Error', color='#e8ecf0', fontsize=10, fontweight='bold')
     ax1.set_xlabel('Image Index', color='#8891a0', fontsize=8)
     ax1.set_ylabel('RMS (px)', color='#8891a0', fontsize=8)
@@ -135,16 +146,16 @@ def render_report_png(result: dict) -> str:
         h_i, w_i = img.shape[:2]
         K_m = np.array(K, np.float64)
         try:
-            if result.get('fisheye_D'):
+            if preferred_model == 'fisheye' and result.get('fisheye_D'):
                 D_m = np.array(result['fisheye_D'], np.float64).reshape(-1, 1)
                 nK = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
-                    K_m, D_m, (w_i, h_i), np.eye(3), balance=0.0
+                    K_m, D_m, (w_i, h_i), np.eye(3), balance=fisheye_balance
                 )
                 m1, m2 = cv2.fisheye.initUndistortRectifyMap(K_m, D_m, np.eye(3), nK, (w_i, h_i), cv2.CV_16SC2)
                 undist = cv2.remap(img, m1, m2, cv2.INTER_LINEAR, cv2.BORDER_CONSTANT)
             else:
                 D_m = np.array(result['dist'], np.float64)
-                nK, _ = cv2.getOptimalNewCameraMatrix(K_m, D_m, (w_i, h_i), 1)
+                nK, _ = cv2.getOptimalNewCameraMatrix(K_m, D_m, (w_i, h_i), 0.0)
                 undist = cv2.undistort(img, K_m, D_m, None, nK)
             combined = np.hstack([img, undist])
             ax4.imshow(cv2.cvtColor(combined, cv2.COLOR_BGR2RGB), aspect='auto')
@@ -165,7 +176,7 @@ def render_report_png(result: dict) -> str:
     ax5 = fig.add_subplot(gs[1, 2])
     ax5.set_facecolor('#111318')
     ax5.axis('off')
-    rms = result.get('rms', float('nan'))
+    rms = preferred_rms
     Ka = np.array(K) if K else None
     rc = '#00c98a' if rms < 0.5 else '#ffaa00' if rms < 1.5 else '#ff4466'
     grade = 'Excellent' if rms < 0.5 else 'Good' if rms < 1.5 else 'Poor'

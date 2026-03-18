@@ -8,41 +8,49 @@
 <body>
 <header class="hdr">
   <div class="hicon">🎯</div>
-  <div class="htitle">鱼眼矫正标定工具 <span>v2.0</span></div>
+  <div class="htitle"><span id="appTitleText">鱼眼矫正标定工具</span> <span>v2.0</span></div>
   <div class="hright">
     <span class="hpill on" id="hImgCnt">0 张图片</span>
     <span class="hpill" id="hOkCnt">0 有效</span>
+    <select id="langSwitch" class="lang-switch" title="Language">
+      <option value="zh">中文</option>
+      <option value="en">English</option>
+    </select>
   </div>
 </header>
 
 <div class="main">
 <!-- ══ LEFT ══ -->
 <div class="lpanel">
-  <div class="ph">图片列表</div>
+  <div class="ph" id="phImages">图片列表</div>
   <div class="upzone" id="upzone" style="cursor:default;padding:12px">
     <div class="ui">📁</div>
-    <p><strong>输入图片目录并加载</strong>支持 JPG / PNG / BMP 等常见格式</p>
+    <p><strong id="upzoneStrong">输入图片目录并加载</strong><span id="upzoneDesc">支持 JPG / PNG / BMP 等常见格式</span></p>
     <div style="display:flex;gap:6px;align-items:center;justify-content:center;margin-top:8px">
       <input id="dirPath" type="text" placeholder="例如: /workspace/code/image/fisheye" style="width:100%;max-width:220px;background:var(--s1);border:1px solid var(--bd);border-radius:7px;color:var(--tx1);padding:6px 8px;font-size:11px">
-      <button class="btn" type="button" onclick="pickImageDirectory()">选择目录</button>
+      <button class="btn" id="btPickDir" type="button" onclick="pickImageDirectory()">选择目录</button>
     </div>
   </div>
   <div class="ilist" id="ilist">
-    <div style="text-align:center;padding:28px 12px;color:var(--tx3);font-size:11px">输入目录并加载图片</div>
+    <div style="text-align:center;padding:28px 12px;color:var(--tx3);font-size:11px" id="ilistEmpty">输入目录并加载图片</div>
   </div>
   <div class="lfoot">
-    <button class="btn" id="btDA" onclick="detectAll()" disabled>批量检测</button>
-    <button class="btn btn-p" id="btCal" onclick="doCalib()" disabled>计算标定</button>
+    <button class="btn" id="btDA" onclick="detectAll()" disabled style="flex:0 0 auto;padding:7px 10px">批量检测</button>
+    <select id="calMode" style="flex:1;min-width:0;;background:var(--s1);border:1px solid var(--bd);border-radius:8px;color:var(--tx1);padding:8px 6px 8px 8px;font-size:11px">
+      <option value="standard">标准模型</option>
+      <option value="fisheye">鱼眼模型</option>
+    </select>
+    <button class="btn btn-p" id="btCal" onclick="doCalib()" disabled style="flex:0 0 auto;padding:7px 10px">计算标定</button>
   </div>
   <div class="lfoot">
-    <button class="btn" onclick="clearAllImages()" style="border-color:var(--err);color:var(--err)">🗑 清空全部</button>
+    <button class="btn" id="btClearAll" onclick="clearAllImages()" style="border-color:var(--err);color:var(--err)">🗑 清空全部</button>
   </div>
 </div>
 
 <!-- ══ CENTER ══ -->
 <div class="cpanel">
   <div class="ctbar">
-    <span class="tlbl">模式</span>
+    <span class="tlbl" id="modeLabel">模式</span>
     <button class="tbtn on"   id="mV" onclick="setMode('view')"  title="拖拽角点移位，下拉删除">👁 移动</button>
     <button class="tbtn"      id="mA" onclick="setMode('add')"   title="点击添加新角点">＋ 添加</button>
     <button class="tbtn"      id="mD" onclick="setMode('del')"   title="点击删除最近角点">✕ 删除</button>
@@ -58,12 +66,12 @@
     <button class="tbtn"  id="btFlip"  onclick="flipCorners()"      disabled title="翻转顺序 (0↔末尾)">↩ 翻转</button>
     <button class="tbtn"  id="btLabel" onclick="toggleLabels()"               title="显示/隐藏序号">🏷 序号</button>
     <button class="tbtn"  id="btClr"   onclick="clearCorners()"    disabled>🗑 清除</button>
-    <span class="tlbl" style="margin-left:8px;opacity:0.6">🖱 中键拖动 | 空格 + 拖动</span>
+    <span class="tlbl" id="panHint" style="margin-left:8px;opacity:0.6">🖱 中键拖动 | 空格 + 拖动</span>
     <div class="zctrl">
       <button class="zbtn" onclick="changeZoom(-0.2)">−</button>
       <span class="zlbl" id="zlbl">100%</span>
       <button class="zbtn" onclick="changeZoom(0.2)">＋</button>
-      <button class="zbtn" onclick="fitZoom()" title="适应窗口">⊡</button>
+      <button class="zbtn" id="btFit" onclick="fitZoom()" title="适应窗口">⊡</button>
     </div>
   </div>
 
@@ -71,7 +79,7 @@
     <div class="ch-line ch-h" id="chH"></div>
     <div class="ch-line ch-v" id="chV"></div>
     <div class="ch-dot" id="chDot"></div>
-    <div class="empty-s" id="emptyS"><div class="ei">📷</div><span>输入目录并加载图片</span></div>
+    <div class="empty-s" id="emptyS"><div class="ei">📷</div><span id="emptyHint">输入目录并加载图片</span></div>
     <div id="wrap" style="display:none">
       <img id="imgEl" draggable="false">
       <canvas id="overlay"></canvas>
@@ -80,55 +88,52 @@
   </div>
 
   <div class="csbar">
-    <span>图片：<b id="sn">—</b></span>
-    <span>尺寸：<b id="ss">—</b></span>
-    <span>角点：<b id="sc">0</b></span>
-    <span>坐标：<b id="sp">—</b></span>
+    <span><span id="lblImg">图片</span>：<b id="sn">—</b></span>
+    <span><span id="lblSize">尺寸</span>：<b id="ss">—</b></span>
+    <span><span id="lblCornerNum">角点</span>：<b id="sc">0</b></span>
+    <span><span id="lblCoord">坐标</span>：<b id="sp">—</b></span>
     <span class="mode-hint" id="modeHint">移动模式</span>
   </div>
 </div>
 
 <!-- ══ RIGHT ══ -->
 <div class="rpanel">
-  <div class="ph">标定参数</div>
+  <div class="ph" id="phParams">标定参数</div>
   <div class="psec">
-    <div class="stitle">当前图像</div>
-    <div class="prow"><span class="plbl">状态</span><span class="pval na" id="pSt">未选择</span></div>
-    <div class="prow"><span class="plbl">角点</span><span class="pval na" id="pCn">—</span></div>
-    <div class="prow"><span class="plbl">有效图片</span><span class="pval na" id="pUs">0/0</span></div>
+    <div class="stitle" id="stCurrentImage">当前图像</div>
+    <div class="prow"><span class="plbl" id="lblStatus">状态</span><span class="pval na" id="pSt">未选择</span></div>
+    <div class="prow"><span class="plbl" id="lblCorners">角点</span><span class="pval na" id="pCn">—</span></div>
+    <div class="prow"><span class="plbl" id="lblValidImages">有效图片</span><span class="pval na" id="pUs">0/0</span></div>
   </div>
   <div class="psec grow">
-    <div class="stitle">标定结果</div>
+    <div class="stitle" id="stCalibResults">标定结果</div>
     <div id="noCalib" style="text-align:center;padding:14px;color:var(--tx3);font-size:11px">完成检测后点击"计算标定"</div>
     <div id="calRes" style="display:none">
       <div class="rmsd">
         <div class="rmsv" id="rmsv">—</div>
-        <div class="rmsu">pixels RMS  重投影误差</div>
+        <div class="rmsu" id="rmsText">pixels RMS  重投影误差</div>
       </div>
       <div class="rbox">
-        <div class="rtitle">内参矩阵 K</div>
+        <div class="rtitle" id="rtitleModelInfo">模型信息</div>
+        <div class="prow"><span class="plbl" id="lblCalMode">标定模式</span><span class="pval" id="modeUsed">—</span></div>
+        <div class="prow"><span class="plbl" id="lblActiveModel">使用模型</span><span class="pval" id="activeModel">—</span></div>
+      </div>
+      <div class="rbox">
+        <div class="rtitle" id="matTitle">内参矩阵 K</div>
         <div class="mdisp" id="matK">—</div>
       </div>
       <div class="rbox">
-        <div class="rtitle">鱼眼内参矩阵 fisheye_K</div>
-        <div class="mdisp" id="matFK">—</div>
-      </div>
-      <div class="rbox">
-        <div class="rtitle">标准畸变</div>
+        <div class="rtitle" id="distTitle">畸变系数</div>
         <div class="clist" id="distC"></div>
       </div>
+      <button class="cbtn" id="btReport" onclick="showReport()">查看标定报告</button>
+      <button class="exbtn" id="btExportJson" onclick="doExport('json')" disabled>导出 JSON</button>
+      <button class="exbtn" id="btExportYaml" onclick="doExport('yaml')" disabled>导出 YAML</button>
       <div class="rbox">
-        <div class="rtitle">鱼眼系数</div>
-        <div class="clist" id="fishC"></div>
-      </div>
-      <button class="cbtn" onclick="showReport()">查看标定报告</button>
-      <button class="exbtn" onclick="doExport('json')" disabled>导出 JSON</button>
-      <button class="exbtn" onclick="doExport('yaml')" disabled>导出 YAML</button>
-      <div class="rbox">
-        <div class="rtitle">参数矫正预览</div>
+        <div class="rtitle" id="rtitlePreview">参数矫正预览</div>
         <div class="ud-ctrl">
           <select id="udSel"></select>
-          <button class="exbtn" type="button" onclick="previewUndistort()">选择并矫正</button>
+          <button class="exbtn" id="btPreview" type="button" onclick="previewUndistort()">选择并矫正</button>
         </div>
       </div>
     </div>
@@ -139,10 +144,10 @@
 
 <!-- ══ INDEX EDIT POPUP ══ -->
 <div class="idx-pop" id="idxPop">
-  <h4>✏️ 编辑序号 <span class="badge" id="popBadge">0</span></h4>
+  <h4>✏️ <span id="popTitleText">编辑序号</span> <span class="badge" id="popBadge">0</span></h4>
   <div class="info" id="popInfo">坐标：<b>—</b></div>
   <div class="row">
-    <label>目标序号</label>
+    <label id="popTargetLabel">目标序号</label>
     <input type="number" id="popInput" min="0" value="0">
   </div>
   <div class="hint" id="popHint">输入新序号后确认，该点与目标位置的点互换</div>
@@ -157,21 +162,67 @@
   <div class="modal">
     <h2 id="modalTitle">标定报告</h2>
     <img id="modalImg" src="" alt="">
+    <div class="modal-balance" id="modalBalanceWrap" style="display:none">
+      <div class="modal-balance-head">
+        <span>balance</span>
+        <span class="pval" id="udBalanceVal">0.60</span>
+      </div>
+      <input id="udBalance" type="range" min="0" max="1" step="0.01" value="0.6">
+      <div class="modal-tool-grid">
+        <div class="modal-tool-card">
+          <div class="modal-tool-title" id="toolCanvasTitle">画布与主点</div>
+          <label>out_scale <input id="udOutScale" type="number" min="0.5" max="3.0" step="0.05" value="1.00"></label>
+          <label>focal_scale <input id="udFocalScale" type="number" min="0.4" max="2.5" step="0.05" value="1.00"></label>
+          <label>cx_offset <input id="udCxOffset" type="number" min="-2000" max="2000" step="1" value="0"></label>
+          <label>cy_offset <input id="udCyOffset" type="number" min="-2000" max="2000" step="1" value="0"></label>
+        </div>
+        <div class="modal-tool-card">
+          <div class="modal-tool-title" id="toolCropTitle">裁剪参数</div>
+          <label class="modal-tool-check"><input id="udCropEnable" type="checkbox"> <span id="udCropEnableText">启用 crop</span></label>
+          <div class="modal-tool-note" id="cropNoteText">未启用时在矫正图显示虚线框</div>
+          <label>crop_x <input id="udCropX" type="number" min="0" max="0.99" step="0.01" value="0.05"></label>
+          <label>crop_y <input id="udCropY" type="number" min="0" max="0.99" step="0.01" value="0.05"></label>
+          <label>crop_w <input id="udCropW" type="number" min="0.01" max="1" step="0.01" value="0.90"></label>
+          <label>crop_h <input id="udCropH" type="number" min="0.01" max="1" step="0.01" value="0.90"></label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-nav" id="modalNav" style="display:none">
+    <button class="exbtn" id="btPrevImg" type="button" onclick="previewPrevImage()">上一张</button>
+      <span class="pval" id="udNavInfo">-/-</span>
+      <button class="exbtn" id="btNextImg" type="button" onclick="previewNextImage()">下一张</button>
+      <button class="exbtn modal-save-btn" id="modalSaveBtn" type="button" onclick="savePreviewParams()">保存参数</button>
+    </div>
     <div class="modal-pair" id="modalPair" style="display:none">
       <div class="modal-pair-card">
-        <div class="modal-pair-label">原图</div>
+        <div class="modal-pair-label" id="modalOrigLabel">原图</div>
         <img id="modalOrigImg" src="" alt="original">
       </div>
       <div class="modal-pair-card">
-        <div class="modal-pair-label">矫正图</div>
-        <img id="modalRectImg" src="" alt="undistorted">
+        <div class="modal-pair-label" id="modalRectLabel">矫正图</div>
+        <div class="modal-img-wrap">
+          <img id="modalRectImg" src="" alt="undistorted">
+          <div id="modalCropRect" class="modal-crop-rect" style="display:none"></div>
+        </div>
       </div>
     </div>
-    <button class="modal-close" onclick="closeModal()">关闭</button>
+    <button class="modal-close" id="modalCloseBtn" onclick="closeModal()">关闭</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ══ CLEAR CONFIRM ══ -->
+<div class="confirm-bg" id="clearConfirmBg" onclick="if(event.target===this)handleClearConfirm(false)">
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="clearConfirmTitle">
+    <h3 id="clearConfirmTitle">确认清空全部</h3>
+    <p id="clearConfirmMsg">确定要清空所有图片吗？此操作不可恢复。</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" id="clearCancelBtn" type="button" onclick="handleClearConfirm(false)">取消</button>
+      <button class="confirm-btn danger" id="clearOkBtn" type="button" onclick="handleClearConfirm(true)">确认清空</button>
+    </div>
+  </div>
+</div>
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
